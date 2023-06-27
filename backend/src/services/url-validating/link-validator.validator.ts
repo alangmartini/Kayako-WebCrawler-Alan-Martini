@@ -1,4 +1,4 @@
-abstract class LinkValidator {
+class LinkValidator {
   protected next?: LinkValidator
 
   setNext (validator: LinkValidator): LinkValidator {

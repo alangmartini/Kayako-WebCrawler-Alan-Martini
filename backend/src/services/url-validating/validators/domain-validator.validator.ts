@@ -11,7 +11,8 @@ export class DomainValidator extends LinkValidator {
 
   validate (url: string): boolean {
     const hostname = new URL(url).hostname
-    if (hostname !== this.domain) {
+
+    if (!this.domain.includes(hostname)) {
       return false
     }
 
