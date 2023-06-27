@@ -52,39 +52,53 @@ export class Crawler {
   }
 
   async bfs (): Promise<void> {
-    const queue: queueItem[] = [{ url: this.rootUrl, depth: 0 }]
+    let queue: queueItem[] = [{ url: this.rootUrl, depth: 0 }]
 
     // Starts chain of responsibility
     const linkValidator = this.createLinkValidatorChain()
 
     while (queue.length > 0) {
-      let { url, depth } = queue.shift() as queueItem
-      url = url.split('#')[0]
+      const tasks = []
+      const urlsToProcess = queue.slice(0, 3) // adjusts the concurrency level
+      queue = queue.slice(urlsToProcess.length)
 
-      if (depth > this.depth || this.visited.has(url)) {
-        continue
-      }
+      for (let { url, depth } of urlsToProcess) {
+        url = url.split('#')[0]
 
-      if (!linkValidator.validate(url)) {
-        continue
-      }
-
-      this.visited.add(url)
-
-      const { text, links } = await this.urlLoader.loadUrlTextAndLinks(url)
-      const count = this.countWord(text)
-      this.count += count
-
-      console.log(`Found ${count} instances of word "${this.word}" at ${url}`)
-
-      const nextDepth = depth + 1
-      const queuePushCallBack = (link: string): void => {
-        if (!this.visited.has(link)) {
-          queue.push({ url: link, depth: nextDepth })
+        if (depth > this.depth || this.visited.has(url)) {
+          continue
         }
+
+        if (!linkValidator.validate(url)) {
+          continue
+        }
+
+        this.visited.add(url)
+
+        tasks.push(this.processUrl(url, depth))
       }
 
-      links.forEach(queuePushCallBack)
+      const newLinks = await Promise.all(tasks)
+
+      queue.push(...newLinks.flat())
+      // let { url, depth } = queue.shift() as queueItem
     }
+  }
+
+  async processUrl (url: string, depth: number): Promise<queueItem[]> {
+    const { text, links } = await this.urlLoader.loadUrlTextAndLinks(url)
+    const count = this.countWord(text)
+    this.count += count
+
+    const nextDepth = depth + 1
+    const newLinks: queueItem[] = []
+    const queuePushCallBack = (link: string): void => {
+      if (this.visited.has(link)) return
+      newLinks.push({ url: link, depth: nextDepth })
+    }
+
+    links.forEach(queuePushCallBack)
+
+    return newLinks
   }
 }
