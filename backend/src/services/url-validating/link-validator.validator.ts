@@ -1,5 +1,5 @@
 class LinkValidator {
-  protected next?: LinkValidator
+  next?: LinkValidator
 
   setNext (validator: LinkValidator): LinkValidator {
     this.next = validator
@@ -10,6 +10,7 @@ class LinkValidator {
     if (this.next != null) {
       return this.next.validate(url)
     }
+
     return true
   }
 }
