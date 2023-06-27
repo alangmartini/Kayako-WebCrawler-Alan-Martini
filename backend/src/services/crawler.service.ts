@@ -12,25 +12,18 @@ interface queueItem {
 }
 
 export class Crawler {
-  depth: number = 0
-  word: string = ''
+  hostname: string
   count: number = 0
-
   visited: Set<string> = new Set()
 
-  rootUrl: string = 'https://www.kayako.com'
-  hostname: string
-
   constructor (
-    depth = 2,
-    word = 'kayako',
     private readonly urlLoader: UrlLoaderService,
-    rootUrl: string
+    private readonly rootUrl: string,
+    // Were made public to faciltiate tests
+    readonly depth = 2,
+    readonly word = 'kayako',
+    readonly tabsToUse: number = 1
   ) {
-    this.depth = depth
-    this.word = word
-    this.count = 0
-    this.rootUrl = rootUrl
     this.hostname = new URL(rootUrl).hostname
   }
 
@@ -59,7 +52,7 @@ export class Crawler {
 
     while (queue.length > 0) {
       const tasks = []
-      const urlsToProcess = queue.slice(0, 3) // adjusts the concurrency level
+      const urlsToProcess = queue.slice(0, this.tabsToUse) // adjusts the concurrency level
       queue = queue.slice(urlsToProcess.length)
 
       for (let { url, depth } of urlsToProcess) {
@@ -72,7 +65,6 @@ export class Crawler {
         if (!linkValidator.validate(url)) {
           continue
         }
-
         this.visited.add(url)
 
         tasks.push(this.processUrl(url, depth))
@@ -81,7 +73,6 @@ export class Crawler {
       const newLinks = await Promise.all(tasks)
 
       queue.push(...newLinks.flat())
-      // let { url, depth } = queue.shift() as queueItem
     }
   }
 
